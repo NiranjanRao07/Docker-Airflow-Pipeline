@@ -17,20 +17,17 @@ def get_next_day(date_str):
     """
     # Convert the string date to a datetime object
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-    
+
     # Add one day using timedelta
     next_day = date_obj + timedelta(days=1)
-    
+
     # Convert back to string in "YYYY-MM-DD" format
     return next_day.strftime("%Y-%m-%d")
 
 
+# Snowflake connection function
 def return_snowflake_conn():
-
-    # Initialize the SnowflakeHook
-    hook = SnowflakeHook(snowflake_conn_id='snowflake_conn')
-    
-    # Execute the query and fetch results
+    hook = SnowflakeHook(snowflake_conn_id="snowflake_conn")
     conn = hook.get_conn()
     return conn.cursor()
 
@@ -38,7 +35,7 @@ def return_snowflake_conn():
 def get_logical_date():
     # Get the current context
     context = get_current_context()
-    return str(context['logical_date'])[:10]
+    return str(context["logical_date"])[:10]
 
 
 @task
@@ -58,9 +55,11 @@ def load(d, symbol, target_table):
     cur = return_snowflake_conn()
 
     try:
-        cur.execute(f"""CREATE TABLE IF NOT EXISTS {target_table} (
+        cur.execute(
+            f"""CREATE TABLE IF NOT EXISTS {target_table} (
             date date, open float, close float, high float, low float, volume int, symbol varchar 
-        )""")
+        )"""
+        )
         cur.execute("BEGIN;")
         cur.execute(f"DELETE FROM {target_table} WHERE date='{date}'")
         sql = f"""INSERT INTO {target_table} (date, open, close, high, low, volume, symbol) VALUES (
@@ -75,13 +74,13 @@ def load(d, symbol, target_table):
 
 
 with DAG(
-    dag_id = 'YfinanceToSnowflake',
-    start_date = datetime(2024,10,2),
+    dag_id="YfinanceToSnowflake",
+    start_date=datetime(2024, 10, 2),
     catchup=False,
-    tags=['ETL'],
-    schedule = '30 2 * * *'
+    tags=["ETL"],
+    schedule="5 2 * * *",
 ) as dag:
-    target_table = "dev.raw_data.stock_price"
+    target_table = "stock_data_db.raw_data.yfinance"
     symbol = "AAPL"
 
     data = extract(symbol)
